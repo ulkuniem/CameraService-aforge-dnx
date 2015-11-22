@@ -44,6 +44,25 @@ namespace CameraService.Camera
             {
                 return q.TryDequeue(out obj);
             }
+            public bool TryPeek(out System.Drawing.Bitmap obj)
+            {
+                System.Drawing.Bitmap tmp;              
+                lock (this)
+                {
+                    bool ret = q.TryPeek(out tmp);
+                    if(tmp != null)
+                    {
+                        obj = (System.Drawing.Bitmap)tmp.Clone();
+                    }
+                    else
+                    {
+                        obj = null;
+                    }                   
+                    
+                    return ret;                    
+                }
+            }
+            
         }
 
 
@@ -56,7 +75,7 @@ namespace CameraService.Camera
         private static String _WebRootPath;
 
         // Timer for shutting down cameras that API is not used
-        private const int TIME_INTERVAL_IN_MILLISECONDS = 1000;
+        private const int TIME_INTERVAL_IN_MILLISECONDS = 500;
         private static System.Threading.Timer _watchTimer;
         private const int MAX_INACTIVE_IN_MILLISECONDS = 10000;
         private static DateTime[] CameraLastUsedTime;
@@ -180,21 +199,30 @@ namespace CameraService.Camera
             return false;
         }
 
-        public static async Task<Bitmap> GetFrame(int device = 0)
+        public static async Task<System.Drawing.Bitmap> GetFrame(int device = 0)
         {
-            Bitmap frame;
+            System.Drawing.Bitmap frame;
             if (!PingDeviceWasAlive(device))
             {
+                // Make sure the array is empty
+                FrameQueueArray[device].TryDequeue(out frame);
+                FrameQueueArray[device].TryDequeue(out frame);
                 FrameQueueArray[device].TryDequeue(out frame);
                 await Task.Delay(TimeSpan.FromMilliseconds(200));
             }
+            frame = null;
             int tries = 0;
-            while(!FrameQueueArray[device].TryDequeue(out frame) && tries < 100)
+            while(!FrameQueueArray[device].TryPeek(out frame) && tries < 100)
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(50));
                 ++tries;
             }
-            return frame;
+            if(frame != null)
+            {
+                return frame;
+            }
+            return new System.Drawing.Bitmap(640, 480);
+
         }
 
         // Information

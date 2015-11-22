@@ -33,15 +33,26 @@ namespace CameraService.Controllers
         [HttpGet("{id}")]
         public ActionResult GetFresh(int id)
         {
-
-
-            Bitmap frame = Camera.AForgeStillWrapper.GetFrame(id).Result;
-
-            using (System.IO.MemoryStream stream = new System.IO.MemoryStream())
+            try
             {
-                frame.Save(stream, System.Drawing.Imaging.ImageFormat.Jpeg);
-                frame.Dispose();
-                return File(stream.ToArray(), "image/jpeg");
+                System.Drawing.Bitmap frame = Camera.AForgeStillWrapper.GetFrame(id).Result;
+
+                using (System.IO.MemoryStream stream = new System.IO.MemoryStream())
+                {
+                    frame.Save(stream, System.Drawing.Imaging.ImageFormat.Jpeg);
+                    frame.Dispose();
+                    return File(stream.ToArray(), "image/jpeg");
+                }
+            }            
+            catch (Exception e)
+            {
+                CameraService.DPP.TemplateMessage errmsg = new DPP.TemplateMessage("result");
+                errmsg.id = CameraService.DPP.TemplateMessage.NextId();
+                errmsg.error = new DPP.TemplateMessage.Error("Internal");
+                errmsg.error.reason = "Could not get frame from camera";
+                errmsg.error.offendingMessage = e.ToString();
+
+                return Content(errmsg.stringify().ToString(), "application/json");
             }
         }
 
@@ -191,7 +202,7 @@ namespace CameraService.Controllers
         [HttpGet("{id}/compare/{name}")]
         public ActionResult Compare(int id, string name, string d, int th = 60)
         {
-            Camera.AForgeStillWrapper.PingDeviceWasAlive(id);
+
             String filePath = _hostEnvironment.WebRootPath + "\\static\\Camera\\" + id;
             String filePathDiff = _hostEnvironment.WebRootPath + "\\static\\Camera\\" + id + "\\diff";
             String filePathLeft = _hostEnvironment.WebRootPath + "\\static\\Camera\\" + id + "\\left";
@@ -339,7 +350,6 @@ namespace CameraService.Controllers
         [HttpGet("{id}/lastToNewReference/{name}")]
         public ActionResult SaveLatestAs(int id, string name)
         {
-            CameraService.Camera.AForgeStillWrapper.PingDeviceWasAlive(id);
             CameraService.DPP.TemplateMessage result = new DPP.TemplateMessage("result");
             result.id = CameraService.DPP.TemplateMessage.NextId();
 
@@ -439,7 +449,6 @@ namespace CameraService.Controllers
         [HttpDelete("{id}/compare/{name}")]
         public void Delete(int id, string name)
         {
-            CameraService.Camera.AForgeStillWrapper.PingDeviceWasAlive(id);
 
             List<String> files = new List<String>();
             files.Add(_hostEnvironment.WebRootPath + "\\static\\Camera\\" + id + "\\" + name + ".png");
@@ -467,7 +476,7 @@ namespace CameraService.Controllers
         [HttpGet("{id}/clear/{name}")]
         public ActionResult Clear(int id, string name)
         {
-            CameraService.Camera.AForgeStillWrapper.PingDeviceWasAlive(id);
+
             List<String> files = new List<String>();
             files.Add(_hostEnvironment.WebRootPath + "\\static\\Camera\\" + id + "\\" + name + ".png");
             files.Add(_hostEnvironment.WebRootPath + "\\static\\Camera\\" + id + "\\diff\\" + name + ".png");
