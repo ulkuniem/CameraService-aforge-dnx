@@ -243,20 +243,33 @@ namespace CameraService.Controllers
 
                 return Content(errmsg.stringify().ToString(), "application/json");
             }
-
             Bitmap left = null;
-            //  Check for comparison picture
-            fullPath = System.IO.Path.Combine(filePath, fileName);
-            if (System.IO.File.Exists(fullPath))
+            try
             {
-                left = (Bitmap)Image.FromFile(fullPath);
-            }
-            else
-            {
-                // If File does not Exists make this the reference.
+                
+                //  Check for comparison picture
                 fullPath = System.IO.Path.Combine(filePath, fileName);
-                right.Save(fullPath);
-                left = (Bitmap)right.Clone();
+                if (System.IO.File.Exists(fullPath))
+                {
+                    left = (Bitmap)Image.FromFile(fullPath);
+                }
+                else
+                {
+                    // If File does not Exists make this the reference.
+                    fullPath = System.IO.Path.Combine(filePath, fileName);
+                    right.Save(fullPath);
+                    left = (Bitmap)right.Clone();
+                }
+            }
+            catch (Exception e)
+            {
+                CameraService.DPP.TemplateMessage errmsg = new DPP.TemplateMessage("result");
+                errmsg.id = CameraService.DPP.TemplateMessage.NextId();
+                errmsg.error = new DPP.TemplateMessage.Error("Internal");
+                errmsg.error.reason = "Could not get comparison left frame";
+                errmsg.error.offendingMessage = e.Message;
+
+                return Content(errmsg.stringify().ToString(), "application/json");
             }
 
             // Possible crop.
@@ -313,21 +326,35 @@ namespace CameraService.Controllers
 
                 }
             }
+            Bitmap resultImage = null;
+            AForge.Imaging.Filters.ThresholdedDifference filter = null;
+            try
+            {
+                fullPath = System.IO.Path.Combine(filePathLeft, fileName);
+                left.Save(fullPath);
 
-            fullPath = System.IO.Path.Combine(filePathLeft, fileName);
-            left.Save(fullPath);
+                fullPath = System.IO.Path.Combine(filePathRight, fileName);
+                right.Save(fullPath);
 
-            fullPath = System.IO.Path.Combine(filePathRight, fileName);
-            right.Save(fullPath);
+                // Compare
+                filter = new AForge.Imaging.Filters.ThresholdedDifference(th);
+                filter.OverlayImage = left;
+                resultImage = filter.Apply(right);
 
-            // Compare
-            AForge.Imaging.Filters.ThresholdedDifference filter = new AForge.Imaging.Filters.ThresholdedDifference(th);
-            filter.OverlayImage = left;
-            Bitmap resultImage = filter.Apply(right);
+                // Safe resultImage to diff folder
+                fullPath = System.IO.Path.Combine(filePathDiff, fileName);
+                resultImage.Save(fullPath);
+            }
+            catch (Exception e)
+            {
+                CameraService.DPP.TemplateMessage errmsg = new DPP.TemplateMessage("result");
+                errmsg.id = CameraService.DPP.TemplateMessage.NextId();
+                errmsg.error = new DPP.TemplateMessage.Error("Internal");
+                errmsg.error.reason = "Something went wron comparing or saving results";
+                errmsg.error.offendingMessage = e.Message;
 
-            // Safe resultImage to diff folder
-            fullPath = System.IO.Path.Combine(filePathDiff, fileName);
-            resultImage.Save(fullPath);
+                return Content(errmsg.stringify().ToString(), "application/json");
+            }
 
 
 
@@ -353,7 +380,7 @@ namespace CameraService.Controllers
             CameraService.DPP.TemplateMessage result = new DPP.TemplateMessage("result");
             result.id = CameraService.DPP.TemplateMessage.NextId();
 
-            String last = _hostEnvironment.WebRootPath + "\\static\\Camera\\" + id + "\\right\\" + name + ".png";
+            String last = _hostEnvironment.WebRootPath + "\\static\\Camera\\" + id + "\\last\\" + name + ".png";
             String target = _hostEnvironment.WebRootPath + "\\static\\Camera\\" + id + "\\" + name + ".png";
 
             try
