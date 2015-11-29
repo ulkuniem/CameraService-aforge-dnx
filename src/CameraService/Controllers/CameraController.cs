@@ -363,11 +363,11 @@ namespace CameraService.Controllers
             right.Dispose();
             resultImage.Dispose();
 
-            int diff = filter.WhitePixelsCount;
+  
 
             CameraService.DPP.TemplateMessage result = new DPP.TemplateMessage("result");
             result.id = CameraService.DPP.TemplateMessage.NextId();
-            result.result = diff;
+            result.result = filter.WhitePixelsCount;
 
             return Content(result.stringify().ToString(), "application/json");
         }

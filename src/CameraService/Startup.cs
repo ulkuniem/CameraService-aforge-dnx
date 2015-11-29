@@ -30,7 +30,7 @@ namespace CameraService
             System.Environment.SetEnvironmentVariable("Path", searchPath + ";" + oldPath);
 
     
-            Camera.AForgeStillWrapper VC = new Camera.AForgeStillWrapper(env.WebRootPath);
+            
             
         }
 
@@ -75,6 +75,10 @@ namespace CameraService
             app.UseMvc();
             // Add the following route for porting Web API 2 controllers.
             // routes.MapWebApiRoute("DefaultApi", "api/{controller}/{id?}");
+            Camera.AForgeStillWrapper VC = new Camera.AForgeStillWrapper(env.WebRootPath);
+
+            var logger = loggerFactory.CreateLogger("TestLogger");
+            logger.LogDebug("Yay");
 
 
         }
